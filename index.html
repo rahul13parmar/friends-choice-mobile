@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#176b48"><meta name="description" content="Friends Choice Mobile Repair Management">
+<link rel="manifest" href="manifest.webmanifest">
+<title>Friends Choice Mobile</title>
+<style>
+:root{--g:#176b48;--bg:#f3f6f4;--card:#fff;--ink:#17231d;--muted:#66736b;--line:#dce5df}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px system-ui,-apple-system,sans-serif}
+header{background:var(--g);color:#fff;padding:18px 16px 14px;position:sticky;top:0;z-index:2}
+header h1{font-size:20px;margin:0}header small{opacity:.85}
+nav{display:flex;gap:7px;overflow:auto;padding:10px;background:#fff;position:sticky;top:66px;z-index:2;border-bottom:1px solid var(--line)}
+button,.tab{border:0;border-radius:10px;padding:10px 13px;font:inherit;cursor:pointer;background:#e8f0eb;color:#174b35;white-space:nowrap}
+button.primary,.tab.active{background:var(--g);color:#fff}button.danger{background:#fae7e5;color:#9b2820}
+main{max-width:760px;margin:auto;padding:14px}.page{display:none}.page.active{display:block}
+.card{background:var(--card);border:1px solid var(--line);border-radius:15px;padding:14px;margin-bottom:12px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.stat{background:#edf4ef;border-radius:12px;padding:13px}.stat b{display:block;font-size:22px;margin-top:4px}
+label{display:block;font-size:13px;color:var(--muted);margin:10px 0 5px}
+input,select,textarea{width:100%;padding:12px;border:1px solid #cbd8cf;border-radius:10px;font:inherit;background:#fff;color:var(--ink)}
+textarea{min-height:70px}form button{width:100%;margin-top:14px}
+.row{display:flex;justify-content:space-between;gap:10px;align-items:center}.muted{color:var(--muted);font-size:12px}.job{border-top:1px solid var(--line);padding:12px 0}.pill{font-size:11px;background:#e8f0eb;padding:5px 8px;border-radius:20px}
+.actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}.actions button{font-size:13px;padding:8px 10px}
+h2{font-size:18px;margin:4px 0 12px}.empty{color:var(--muted);text-align:center;padding:20px}
+@media(min-width:600px){main{padding:20px}.grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+</style>
+</head>
+<body>
+<header><h1>FRIENDS CHOICE MOBILE</h1><small>Mobile Repair & Shop Management</small></header>
+<nav>
+<button class="tab active" data-page="home">डैशबोर्ड</button>
+<button class="tab" data-page="new">नया जॉब</button>
+<button class="tab" data-page="jobs">रिपेयर रिकॉर्ड</button>
+<button class="tab" data-page="stock">स्टॉक</button>
+<button class="tab" data-page="accounts">खर्च / रिपोर्ट</button>
+<button class="tab" data-page="backup">बैकअप</button>
+</nav>
+<main>
+<section id="home" class="page active">
+<div class="grid">
+<div class="stat">कुल जॉब<b id="sJobs">0</b></div><div class="stat">बकाया<b id="sDue">₹0</b></div>
+<div class="stat">प्राप्त भुगतान<b id="sPaid">₹0</b></div><div class="stat">खर्च<b id="sExpense">₹0</b></div>
+</div>
+<div class="card"><h2>आज की दुकान</h2><div id="homeJobs" class="muted">अभी कोई जॉब नहीं है।</div></div>
+<div class="card"><b>शुरुआत करें</b><p class="muted">नया ग्राहक जोड़ें, रिपेयर स्टेटस अपडेट करें और बिल की जानकारी रखें।</p><button class="primary" onclick="show('new')">＋ नया जॉब कार्ड</button></div>
+</section>
+<section id="new" class="page">
+<div class="card"><h2>नया रिपेयर जॉब कार्ड</h2>
+<form id="jobForm">
+<label>ग्राहक का नाम *</label><input name="customer" required>
+<label>मोबाइल नंबर *</label><input name="phone" inputmode="tel" required>
+<label>फोन मॉडल *</label><input name="model" placeholder="जैसे Vivo Y21" required>
+<label>IMEI / सीरियल नंबर (वैकल्पिक)</label><input name="imei">
+<label>समस्या *</label><select name="problem" required><option value="">समस्या चुनें</option><option>Display</option><option>Charging</option><option>Battery</option><option>Dead Phone</option><option>Speaker / Mic</option><option>Software</option><option>Water Damage</option><option>Board Repair</option><option>Other</option></select>
+<label>जाँच / रिपेयर नोट</label><textarea name="notes"></textarea>
+<div class="grid"><div><label>कुल चार्ज (₹)</label><input name="total" type="number" min="0" value="0" required></div><div><label>एडवांस (₹)</label><input name="paid" type="number" min="0" value="0" required></div></div>
+<button class="primary">जॉब कार्ड सेव करें</button>
+</form></div></section>
+<section id="jobs" class="page"><div class="card"><h2>रिपेयर रिकॉर्ड</h2><input id="jobSearch" placeholder="नाम, नंबर, जॉब नंबर खोजें"><div id="jobList"></div></div></section>
+<section id="stock" class="page">
+<div class="card"><h2>स्टॉक जोड़ें</h2><form id="stockForm"><label>आइटम का नाम</label><input name="name" required><div class="grid"><div><label>मात्रा</label><input name="qty" type="number" min="0" value="1"></div><div><label>खरीद कीमत ₹</label><input name="cost" type="number" min="0" value="0"></div></div><button class="primary">स्टॉक सेव करें</button></form></div>
+<div class="card"><h2>मौजूदा स्टॉक</h2><div id="stockList"></div></div>
+</section>
+<section id="accounts" class="page">
+<div class="card"><h2>दुकान का खर्च दर्ज करें</h2><form id="expenseForm"><label>खर्च का विवरण</label><input name="name" required><label>रकम ₹</label><input name="amount" type="number" min="1" required><button class="primary">खर्च सेव करें</button></form></div>
+<div class="card"><h2>रिपोर्ट</h2><div id="report"></div><h2 style="margin-top:18px">खर्च रिकॉर्ड</h2><div id="expenseList"></div></div>
+</section>
+<section id="backup" class="page">
+<div class="card"><h2>डेटा बैकअप</h2><p class="muted">अपने रिकॉर्ड की JSON फाइल डाउनलोड करके सुरक्षित रखें। फोन बदलने या डेटा हटने पर इसी फाइल से रिकॉर्ड वापस ला सकते हैं।</p><button class="primary" id="exportBtn">बैकअप डाउनलोड करें</button><label>पुराना बैकअप वापस लाएँ</label><input type="file" id="importFile" accept=".json,application/json"><p class="muted">ध्यान दें: अभी ऑटो क्लाउड सिंक सक्रिय नहीं है। बैकअप फाइल Google Drive में खुद अपलोड कर सकते हैं।</p></div>
+<div class="card"><h2>ऐप की जानकारी</h2><p class="muted">यह संस्करण इस फोन के ब्राउज़र में ऑफलाइन रिकॉर्ड रखता है। ब्राउज़र डेटा साफ करने से पहले बैकअप जरूर लें।</p><button id="installBtn" class="primary" hidden>होम स्क्रीन पर इंस्टॉल करें</button></div>
+</section>
+</main>
+<script>
+const KEY='fcm_store_v1';
+let db=JSON.parse(localStorage.getItem(KEY)||'{"jobs":[],"stock":[],"expenses":[]}');
+function save(){localStorage.setItem(KEY,JSON.stringify(db));render()}
+function money(n){return '₹'+Number(n||0).toLocaleString('en-IN')}
+function show(id){document.querySelectorAll('.page').forEach(x=>x.classList.toggle('active',x.id===id));document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x.dataset.page===id))}
+document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>show(b.dataset.page));
+function render(){
+ const paid=db.jobs.reduce((s,j)=>s+j.paid,0),due=db.jobs.reduce((s,j)=>s+Math.max(0,j.total-j.paid),0),exp=db.expenses.reduce((s,e)=>s+e.amount,0);
+ sJobs.textContent=db.jobs.length;sPaid.textContent=money(paid);sDue.textContent=money(due);sExpense.textContent=money(exp);
+ homeJobs.innerHTML=db.jobs.slice(0,4).map(j=>`<div class="job"><b>${esc(j.customer)}</b> · ${esc(j.model)}<div class="muted">${j.id} · ${esc(j.status)}</div></div>`).join('')||'अभी कोई जॉब नहीं है।';
+ drawJobs();drawStock();drawAccounts();
+}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+jobForm.onsubmit=e=>{e.preventDefault();let f=new FormData(jobForm),total=+f.get('total'),paid=+f.get('paid');if(paid>total)return alert('एडवांस कुल चार्ज से ज्यादा नहीं हो सकता।');db.jobs.unshift({id:'FCM-'+Date.now().toString().slice(-7),date:new Date().toLocaleDateString('en-IN'),customer:f.get('customer'),phone:f.get('phone'),model:f.get('model'),imei:f.get('imei'),problem:f.get('problem'),notes:f.get('notes'),total,paid,status:'Pending'});jobForm.reset();save();show('jobs');alert('जॉब कार्ड सेव हो गया।')};
+function drawJobs(){let q=(jobSearch.value||'').toLowerCase();jobList.innerHTML=db.jobs.filter(j=>(j.customer+j.phone+j.id+j.model).toLowerCase().includes(q)).map(j=>`<div class="job"><div class="row"><b>${esc(j.customer)}</b><span class="pill">${esc(j.status)}</span></div><div class="muted">${j.id} · ${j.date} · ${esc(j.phone)}</div><div>${esc(j.model)} — ${esc(j.problem)}</div><div class="muted">कुल ${money(j.total)} · जमा ${money(j.paid)} · बाकी ${money(j.total-j.paid)}</div><label>स्टेटस</label><select onchange="changeStatus('${j.id}',this.value)">${['Pending','Repairing','Ready','Delivered'].map(s=>`<option ${j.status===s?'selected':''}>${s}</option>`).join('')}</select><div class="actions"><button onclick="receipt('${j.id}')">रसीद / प्रिंट</button><button onclick="payment('${j.id}')">भुगतान जोड़ें</button><button onclick="shareJob('${j.id}')">WhatsApp शेयर</button></div></div>`).join('')||'<div class="empty">कोई रिकॉर्ड नहीं मिला।</div>'}
+function changeStatus(id,v){let j=db.jobs.find(x=>x.id===id);if(j){j.status=v;save()}}
+function receipt(id){let j=db.jobs.find(x=>x.id===id);let w=window.open('','_blank');if(!w)return alert('ब्राउज़र में पॉपअप अनुमति दें।');w.document.write(`<html><meta name="viewport" content="width=device-width"><title>Job Receipt</title><body style="font:16px Arial;padding:20px"><h2>FRIENDS CHOICE MOBILE</h2><h3>REPAIR JOB CARD</h3><hr><p>Job: ${esc(j.id)}</p><p>Date: ${esc(j.date)}</p><p>Customer: ${esc(j.customer)}</p><p>Phone: ${esc(j.phone)}</p><p>Model: ${esc(j.model)}</p><p>IMEI: ${esc(j.imei||'-')}</p><p>Problem: ${esc(j.problem)}</p><p>Notes: ${esc(j.notes||'-')}</p><hr><p>Total: ${money(j.total)}</p><p>Paid: ${money(j.paid)}</p><h3>Balance: ${money(j.total-j.paid)}</h3><p>Status: ${esc(j.status)}</p><br><p>Customer Signature: __________</p><script>window.print()<\/script></body></html>`);w.document.close()}
+function payment(id){let j=db.jobs.find(x=>x.id===id),v=prompt('कितना भुगतान प्राप्त हुआ? बाकी: '+money(j.total-j.paid));if(v===null)return;v=Number(v);if(!Number.isFinite(v)||v<0||j.paid+v>j.total)return alert('रकम सही दर्ज करें।');j.paid+=v;save()}
+function shareJob(id){let j=db.jobs.find(x=>x.id===id),msg=`Friends Choice Mobile\\nJob: ${j.id}\\nCustomer: ${j.customer}\\nModel: ${j.model}\\nStatus: ${j.status}\\nBalance: ${money(j.total-j.paid)}`;window.open('https://wa.me/91'+j.phone.replace(/\\D/g,'')+'?text='+encodeURIComponent(msg),'_blank')}
+jobSearch.oninput=drawJobs;
+stockForm.onsubmit=e=>{e.preventDefault();let f=new FormData(stockForm);db.stock.push({id:Date.now(),name:f.get('name'),qty:+f.get('qty'),cost:+f.get('cost')});stockForm.reset();save()};
+function drawStock(){stockList.innerHTML=db.stock.map(s=>`<div class="job"><div class="row"><b>${esc(s.name)}</b><b>${s.qty} नग</b></div><div class="muted">खरीद कीमत ${money(s.cost)}</div><div class="actions"><button onclick="stockChange(${s.id},1)">+1</button><button onclick="stockChange(${s.id},-1)">−1</button><button class="danger" onclick="removeStock(${s.id})">हटाएँ</button></div></div>`).join('')||'<div class="empty">अभी स्टॉक नहीं जोड़ा गया।</div>'}
+function stockChange(id,n){let s=db.stock.find(x=>x.id===id);s.qty=Math.max(0,s.qty+n);save()}function removeStock(id){if(confirm('यह आइटम हटाएँ?')){db.stock=db.stock.filter(x=>x.id!==id);save()}}
+expenseForm.onsubmit=e=>{e.preventDefault();let f=new FormData(expenseForm);db.expenses.unshift({name:f.get('name'),amount:+f.get('amount'),date:new Date().toLocaleDateString('en-IN')});expenseForm.reset();save()};
+function drawAccounts(){let rev=db.jobs.reduce((s,j)=>s+j.paid,0),ex=db.expenses.reduce((s,e)=>s+e.amount,0),due=db.jobs.reduce((s,j)=>s+j.total-j.paid,0);report.innerHTML=`<p>कुल प्राप्त भुगतान: <b>${money(rev)}</b></p><p>कुल बकाया: <b>${money(due)}</b></p><p>दर्ज खर्च: <b>${money(ex)}</b></p><p>प्राप्त भुगतान − दर्ज खर्च: <b>${money(rev-ex)}</b></p><p class="muted">यह शुद्ध मुनाफा नहीं है; पार्ट्स लागत और अन्य खर्च भी दर्ज करें।</p>`;expenseList.innerHTML=db.expenses.map(x=>`<div class="job row"><span>${esc(x.name)} <small class="muted">${x.date}</small></span><b>${money(x.amount)}</b></div>`).join('')||'<div class="empty">खर्च दर्ज नहीं है।</div>'}
+exportBtn.onclick=()=>{let blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='FriendsChoiceMobile-Backup.json';a.click();URL.revokeObjectURL(a.href)};
+importFile.onchange=async e=>{let f=e.target.files[0];if(!f)return;try{let x=JSON.parse(await f.text());if(!Array.isArray(x.jobs)||!Array.isArray(x.stock)||!Array.isArray(x.expenses))throw 0;if(confirm('मौजूदा डेटा की जगह बैकअप डेटा लोड करें?')){db=x;save();alert('बैकअप वापस आ गया।')}}catch{alert('यह बैकअप फाइल सही नहीं है।')}};
+let installPrompt;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installPrompt=e;installBtn.hidden=false});installBtn.onclick=async()=>{if(installPrompt){installPrompt.prompt();installPrompt=null}else alert('Chrome मेन्यू ⋮ से Add to Home screen चुनें।')};
+if('serviceWorker' in navigator && location.protocol.startsWith('http'))navigator.serviceWorker.register('./sw.js').catch(()=>{});
+render();
+</script>
+</body></html>

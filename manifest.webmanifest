@@ -1,0 +1,9 @@
+{
+  "name": "Friends Choice Mobile",
+  "short_name": "Friends Choice",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f3f6f4",
+  "theme_color": "#176b48",
+  "description": "Mobile Repair & Shop Management"
+}
