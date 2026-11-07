@@ -54,6 +54,9 @@ h2{font-size:18px;margin:4px 0 12px}.empty{color:var(--muted);text-align:center;
 <label>समस्या *</label><select name="problem" required><option value="">समस्या चुनें</option><option>Display</option><option>Charging</option><option>Battery</option><option>Dead Phone</option><option>Speaker / Mic</option><option>Software</option><option>Water Damage</option><option>Board Repair</option><option>Other</option></select>
 <label>जाँच / रिपेयर नोट</label><textarea name="notes"></textarea>
 <div class="grid"><div><label>कुल चार्ज (₹)</label><input name="total" type="number" min="0" value="0" required></div><div><label>एडवांस (₹)</label><input name="paid" type="number" min="0" value="0" required></div></div>
+<label>रिपेयर में इस्तेमाल पार्ट (वैकल्पिक)</label><select id="repairPartSelect"><option value="">कोई पार्ट नहीं</option></select>
+<div><label>पार्ट की मात्रा</label><input id="repairPartQty" type="number" min="1" value="1"></div>
+<p class="muted">पार्ट चुनने पर सेव करते ही स्टॉक अपने आप कम होगा और उसकी खरीद लागत मुनाफे में जुड़ेगी।</p>
 <button class="primary">जॉब कार्ड सेव करें</button>
 </form></div></section>
 <section id="jobs" class="page"><div class="card"><h2>रिपेयर रिकॉर्ड</h2><input id="jobSearch" placeholder="नाम, नंबर, जॉब नंबर खोजें"><div id="jobList"></div></div></section>
@@ -79,15 +82,33 @@ function show(id){document.querySelectorAll('.page').forEach(x=>x.classList.togg
 document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>show(b.dataset.page));
 function render(){
  const paid=db.jobs.reduce((s,j)=>s+j.paid,0),due=db.jobs.reduce((s,j)=>s+Math.max(0,j.total-j.paid),0),exp=db.expenses.reduce((s,e)=>s+e.amount,0);
+ const ps=document.getElementById('repairPartSelect');
+ if(ps){const old=ps.value;ps.innerHTML='<option value="">कोई पार्ट नहीं</option>'+db.stock.map(s=>`<option value="${s.id}">${esc(s.name)} — उपलब्ध ${s.qty} — लागत ${money(s.cost)}</option>`).join('');if(db.stock.some(s=>String(s.id)===old))ps.value=old;}
  sJobs.textContent=db.jobs.length;sPaid.textContent=money(paid);sDue.textContent=money(due);sExpense.textContent=money(exp);
  homeJobs.innerHTML=db.jobs.slice(0,4).map(j=>`<div class="job"><b>${esc(j.customer)}</b> · ${esc(j.model)}<div class="muted">${j.id} · ${esc(j.status)}</div></div>`).join('')||'अभी कोई जॉब नहीं है।';
  drawJobs();drawStock();drawAccounts();
 }
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-jobForm.onsubmit=e=>{e.preventDefault();let f=new FormData(jobForm),total=+f.get('total'),paid=+f.get('paid');if(paid>total)return alert('एडवांस कुल चार्ज से ज्यादा नहीं हो सकता।');db.jobs.unshift({id:'FCM-'+Date.now().toString().slice(-7),date:new Date().toLocaleDateString('en-IN'),customer:f.get('customer'),phone:f.get('phone'),model:f.get('model'),imei:f.get('imei'),problem:f.get('problem'),notes:f.get('notes'),total,paid,status:'Pending'});jobForm.reset();save();show('jobs');alert('जॉब कार्ड सेव हो गया।')};
-function drawJobs(){let q=(jobSearch.value||'').toLowerCase();jobList.innerHTML=db.jobs.filter(j=>(j.customer+j.phone+j.id+j.model).toLowerCase().includes(q)).map(j=>`<div class="job"><div class="row"><b>${esc(j.customer)}</b><span class="pill">${esc(j.status)}</span></div><div class="muted">${j.id} · ${j.date} · ${esc(j.phone)}</div><div>${esc(j.model)} — ${esc(j.problem)}</div><div class="muted">कुल ${money(j.total)} · जमा ${money(j.paid)} · बाकी ${money(j.total-j.paid)}</div><label>स्टेटस</label><select onchange="changeStatus('${j.id}',this.value)">${['Pending','Repairing','Ready','Delivered'].map(s=>`<option ${j.status===s?'selected':''}>${s}</option>`).join('')}</select><div class="actions"><button onclick="receipt('${j.id}')">रसीद / प्रिंट</button><button onclick="payment('${j.id}')">भुगतान जोड़ें</button><button onclick="shareJob('${j.id}')">WhatsApp शेयर</button></div></div>`).join('')||'<div class="empty">कोई रिकॉर्ड नहीं मिला।</div>'}
+jobForm.onsubmit=e=>{
+ e.preventDefault();
+ let f=new FormData(jobForm),total=+f.get('total'),paid=+f.get('paid');
+ if(paid>total)return alert('एडवांस कुल चार्ज से ज्यादा नहीं हो सकता।');
+ const partId=document.getElementById('repairPartSelect').value;
+ const partQty=Math.max(1,Number(document.getElementById('repairPartQty').value)||1);
+ let usedPart=null;
+ if(partId){
+   const item=db.stock.find(x=>String(x.id)===String(partId));
+   if(!item)return alert('चुना हुआ पार्ट स्टॉक में नहीं मिला।');
+   if(item.qty<partQty)return alert('इस पार्ट का स्टॉक पर्याप्त नहीं है। उपलब्ध मात्रा: '+item.qty);
+   usedPart={name:item.name,qty:partQty,unitCost:item.cost,totalCost:item.cost*partQty};
+   item.qty-=partQty;
+ }
+ db.jobs.unshift({id:'FCM-'+Date.now().toString().slice(-7),date:new Date().toLocaleDateString('en-IN'),customer:f.get('customer'),phone:f.get('phone'),model:f.get('model'),imei:f.get('imei'),problem:f.get('problem'),notes:f.get('notes'),total,paid,status:'Pending',usedPart});
+ jobForm.reset();document.getElementById('repairPartQty').value=1;save();show('jobs');alert('जॉब कार्ड सेव हो गया।'+(usedPart?' पार्ट स्टॉक से घटा दिया गया।':''));
+};
+function drawJobs(){let q=(jobSearch.value||'').toLowerCase();jobList.innerHTML=db.jobs.filter(j=>(j.customer+j.phone+j.id+j.model).toLowerCase().includes(q)).map(j=>`<div class="job"><div class="row"><b>${esc(j.customer)}</b><span class="pill">${esc(j.status)}</span></div><div class="muted">${j.id} · ${j.date} · ${esc(j.phone)}</div><div>${esc(j.model)} — ${esc(j.problem)}</div>${j.usedPart?`<div class="muted">पार्ट: ${esc(j.usedPart.name)} × ${j.usedPart.qty} · लागत ${money(j.usedPart.totalCost)}</div>`:''}<div class="muted">कुल ${money(j.total)} · जमा ${money(j.paid)} · बाकी ${money(j.total-j.paid)}</div><label>स्टेटस</label><select onchange="changeStatus('${j.id}',this.value)">${['Pending','Repairing','Ready','Delivered'].map(s=>`<option ${j.status===s?'selected':''}>${s}</option>`).join('')}</select><div class="actions"><button onclick="receipt('${j.id}')">रसीद / प्रिंट</button><button onclick="payment('${j.id}')">भुगतान जोड़ें</button><button onclick="shareJob('${j.id}')">WhatsApp शेयर</button></div></div>`).join('')||'<div class="empty">कोई रिकॉर्ड नहीं मिला।</div>'}
 function changeStatus(id,v){let j=db.jobs.find(x=>x.id===id);if(j){j.status=v;save()}}
-function receipt(id){let j=db.jobs.find(x=>x.id===id);let w=window.open('','_blank');if(!w)return alert('ब्राउज़र में पॉपअप अनुमति दें।');w.document.write(`<html><meta name="viewport" content="width=device-width"><title>Job Receipt</title><body style="font:16px Arial;padding:20px"><h2>FRIENDS CHOICE MOBILE</h2><h3>REPAIR JOB CARD</h3><hr><p>Job: ${esc(j.id)}</p><p>Date: ${esc(j.date)}</p><p>Customer: ${esc(j.customer)}</p><p>Phone: ${esc(j.phone)}</p><p>Model: ${esc(j.model)}</p><p>IMEI: ${esc(j.imei||'-')}</p><p>Problem: ${esc(j.problem)}</p><p>Notes: ${esc(j.notes||'-')}</p><hr><p>Total: ${money(j.total)}</p><p>Paid: ${money(j.paid)}</p><h3>Balance: ${money(j.total-j.paid)}</h3><p>Status: ${esc(j.status)}</p><br><p>Customer Signature: __________</p><script>window.print()<\/script></body></html>`);w.document.close()}
+function receipt(id){let j=db.jobs.find(x=>x.id===id);let w=window.open('','_blank');if(!w)return alert('ब्राउज़र में पॉपअप अनुमति दें।');w.document.write(`<html><meta name="viewport" content="width=device-width"><title>Job Receipt</title><body style="font:16px Arial;padding:20px"><h2>FRIENDS CHOICE MOBILE</h2><h3>REPAIR JOB CARD</h3><hr><p>Job: ${esc(j.id)}</p><p>Date: ${esc(j.date)}</p><p>Customer: ${esc(j.customer)}</p><p>Phone: ${esc(j.phone)}</p><p>Model: ${esc(j.model)}</p><p>IMEI: ${esc(j.imei||'-')}</p><p>Problem: ${esc(j.problem)}</p><p>Notes: ${esc(j.notes||'-')}</p>${j.usedPart?`<p>Part used: ${esc(j.usedPart.name)} × ${j.usedPart.qty}</p>`:''}<hr><p>Total: ${money(j.total)}</p><p>Paid: ${money(j.paid)}</p><h3>Balance: ${money(j.total-j.paid)}</h3><p>Status: ${esc(j.status)}</p><br><p>Customer Signature: __________</p><script>window.print()<\/script></body></html>`);w.document.close()}
 function payment(id){let j=db.jobs.find(x=>x.id===id),v=prompt('कितना भुगतान प्राप्त हुआ? बाकी: '+money(j.total-j.paid));if(v===null)return;v=Number(v);if(!Number.isFinite(v)||v<0||j.paid+v>j.total)return alert('रकम सही दर्ज करें।');j.paid+=v;save()}
 function shareJob(id){let j=db.jobs.find(x=>x.id===id),msg=`Friends Choice Mobile\\nJob: ${j.id}\\nCustomer: ${j.customer}\\nModel: ${j.model}\\nStatus: ${j.status}\\nBalance: ${money(j.total-j.paid)}`;window.open('https://wa.me/91'+j.phone.replace(/\\D/g,'')+'?text='+encodeURIComponent(msg),'_blank')}
 jobSearch.oninput=drawJobs;
@@ -95,7 +116,13 @@ stockForm.onsubmit=e=>{e.preventDefault();let f=new FormData(stockForm);db.stock
 function drawStock(){stockList.innerHTML=db.stock.map(s=>`<div class="job"><div class="row"><b>${esc(s.name)}</b><b>${s.qty} नग</b></div><div class="muted">खरीद कीमत ${money(s.cost)}</div><div class="actions"><button onclick="stockChange(${s.id},1)">+1</button><button onclick="stockChange(${s.id},-1)">−1</button><button class="danger" onclick="removeStock(${s.id})">हटाएँ</button></div></div>`).join('')||'<div class="empty">अभी स्टॉक नहीं जोड़ा गया।</div>'}
 function stockChange(id,n){let s=db.stock.find(x=>x.id===id);s.qty=Math.max(0,s.qty+n);save()}function removeStock(id){if(confirm('यह आइटम हटाएँ?')){db.stock=db.stock.filter(x=>x.id!==id);save()}}
 expenseForm.onsubmit=e=>{e.preventDefault();let f=new FormData(expenseForm);db.expenses.unshift({name:f.get('name'),amount:+f.get('amount'),date:new Date().toLocaleDateString('en-IN')});expenseForm.reset();save()};
-function drawAccounts(){let rev=db.jobs.reduce((s,j)=>s+j.paid,0),ex=db.expenses.reduce((s,e)=>s+e.amount,0),due=db.jobs.reduce((s,j)=>s+j.total-j.paid,0);report.innerHTML=`<p>कुल प्राप्त भुगतान: <b>${money(rev)}</b></p><p>कुल बकाया: <b>${money(due)}</b></p><p>दर्ज खर्च: <b>${money(ex)}</b></p><p>प्राप्त भुगतान − दर्ज खर्च: <b>${money(rev-ex)}</b></p><p class="muted">यह शुद्ध मुनाफा नहीं है; पार्ट्स लागत और अन्य खर्च भी दर्ज करें।</p>`;expenseList.innerHTML=db.expenses.map(x=>`<div class="job row"><span>${esc(x.name)} <small class="muted">${x.date}</small></span><b>${money(x.amount)}</b></div>`).join('')||'<div class="empty">खर्च दर्ज नहीं है।</div>'}
+function drawAccounts(){
+ let rev=db.jobs.reduce((s,j)=>s+j.paid,0),ex=db.expenses.reduce((s,e)=>s+e.amount,0),due=db.jobs.reduce((s,j)=>s+j.total-j.paid,0);
+ let billed=db.jobs.reduce((s,j)=>s+j.total,0),partsCost=db.jobs.reduce((s,j)=>s+(j.usedPart?.totalCost||0),0);
+ let gross=billed-partsCost;
+ report.innerHTML=`<p>कुल बिलिंग: <b>${money(billed)}</b></p><p>प्राप्त भुगतान: <b>${money(rev)}</b></p><p>कुल बकाया: <b>${money(due)}</b></p><p>इस्तेमाल पार्ट्स की लागत: <b>${money(partsCost)}</b></p><p>अनुमानित ग्रॉस मार्जिन: <b>${money(gross)}</b></p><p>दर्ज खर्च: <b>${money(ex)}</b></p><p>प्राप्त भुगतान − दर्ज खर्च: <b>${money(rev-ex)}</b></p><p class="muted">यह अनुमानित रिपोर्ट है। स्टॉक खरीद को खर्च में दोबारा दर्ज न करें यदि पार्ट की लागत पहले से जॉब में दर्ज है।</p>`;
+ expenseList.innerHTML=db.expenses.map(x=>`<div class="job row"><span>${esc(x.name)} <small class="muted">${x.date}</small></span><b>${money(x.amount)}</b></div>`).join('')||'<div class="empty">खर्च दर्ज नहीं है।</div>'
+}
 exportBtn.onclick=()=>{let blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='FriendsChoiceMobile-Backup.json';a.click();URL.revokeObjectURL(a.href)};
 importFile.onchange=async e=>{let f=e.target.files[0];if(!f)return;try{let x=JSON.parse(await f.text());if(!Array.isArray(x.jobs)||!Array.isArray(x.stock)||!Array.isArray(x.expenses))throw 0;if(confirm('मौजूदा डेटा की जगह बैकअप डेटा लोड करें?')){db=x;save();alert('बैकअप वापस आ गया।')}}catch{alert('यह बैकअप फाइल सही नहीं है।')}};
 let installPrompt;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installPrompt=e;installBtn.hidden=false});installBtn.onclick=async()=>{if(installPrompt){installPrompt.prompt();installPrompt=null}else alert('Chrome मेन्यू ⋮ से Add to Home screen चुनें।')};
